@@ -280,9 +280,10 @@ internal partial class RepositoryManager : Window
 
         _originalNodeList = _repositoryTree.Objects ?? [];
 
-        UpdateFilterStatus();
-
-        FilterRepositoryList();
+        if (!UpdateFilterStatus())
+        {
+            FilterRepositoryList();
+        }
 
         _repositoryTree.SetFocus();
 
@@ -467,7 +468,7 @@ internal partial class RepositoryManager : Window
 
         tracker.Dispose();
 
-        UpdateFilterStatus();
+        _ = UpdateFilterStatus();
 
         _processing = false;
     }
@@ -496,7 +497,7 @@ internal partial class RepositoryManager : Window
 
         tracker.Dispose();
 
-        UpdateFilterStatus();
+        _ = UpdateFilterStatus();
 
         _processing = false;
     }
@@ -560,11 +561,40 @@ internal partial class RepositoryManager : Window
         }
     }
 
-    private void UpdateFilterStatus()
+    private bool UpdateFilterStatus()
     {
-        _filterByDirty.Enabled = _originalNodeList.Any(o => (o as RepositoryNode)?.Status?.IsDirty ?? false);
-        _filterByBehind.Enabled = _originalNodeList.Any(o => (o as RepositoryNode)?.CurrentRepositoryHeadIsBehind ?? false);
-        _filterByError.Enabled = _originalNodeList.Any(o => (o as RepositoryNode)?.HasError ?? false);
+        bool hasDirty = _originalNodeList.Any(o => (o as RepositoryNode)?.Status?.IsDirty ?? false);
+        bool hasBehind = _originalNodeList.Any(o => (o as RepositoryNode)?.CurrentRepositoryHeadIsBehind ?? false);
+        bool hasError = _originalNodeList.Any(o => (o as RepositoryNode)?.HasError ?? false);
+        bool swap = false;
+
+        if (!hasDirty && _filterByDirty.Value is CheckState.Checked)
+        {
+            swap |= true;
+            _filterByDirty.Value = CheckState.UnChecked;
+        }
+        if (!hasBehind && _filterByBehind.Value is CheckState.Checked)
+        {
+            swap |= true;
+            _filterByBehind.Value = CheckState.UnChecked;
+        }
+
+        if (!hasError && _filterByError.Value is CheckState.Checked)
+        {
+            swap |= true;
+            _filterByError.Value = CheckState.UnChecked;
+        }
+
+        _filterByDirty.Enabled = hasDirty;
+        _filterByBehind.Enabled = hasBehind;
+        _filterByError.Enabled = hasError;
+
+        if (swap)
+        {
+            FilterRepositoryList();
+        }
+
+        return swap;
     }
 
     private void LoadActionableCommands()
